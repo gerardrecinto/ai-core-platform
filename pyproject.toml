@@ -1,0 +1,12 @@
+[project]
+name = "ai-core-platform"
+version = "0.1.0"
+description = "Governed AI gateway lab: OIDC auth, RBAC, DLP, routing with fallback, quotas, audit, traces."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
