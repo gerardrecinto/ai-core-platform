@@ -1,0 +1,58 @@
+---
+# Installs the on-prem job agent as a locked-down service. It runs as a system user and only ever
+# starts commands as the requesting engineer's own account, never as root.
+- name: Install the on-prem agent
+  hosts: onprem_agents
+  become: true
+  vars:
+    agent_home: /opt/aicore-agent
+  tasks:
+    - name: Service account without a shell
+      ansible.builtin.user:
+        name: aicore-agent
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Install directory
+      ansible.builtin.file:
+        path: "{{ agent_home }}"
+        state: directory
+        owner: root
+        group: aicore-agent
+        mode: "0750"
+
+    - name: Shared secret for ticket verification (from vault, never in the repo)
+      ansible.builtin.copy:
+        content: "{{ aicore_ticket_secret }}"
+        dest: "{{ agent_home }}/ticket.key"
+        owner: aicore-agent
+        group: aicore-agent
+        mode: "0400"
+      no_log: true
+
+    - name: Hardened systemd unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/aicore-agent.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=AI core on-prem job agent
+          After=network-online.target
+          [Service]
+          User=aicore-agent
+          ExecStart=/usr/bin/python3 -m aicore.agent
+          Environment=PYTHONPATH={{ agent_home }}/src
+          NoNewPrivileges=true
+          ProtectSystem=strict
+          ProtectHome=true
+          PrivateTmp=true
+          Restart=on-failure
+          [Install]
+          WantedBy=multi-user.target
+      notify: Reload systemd
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
