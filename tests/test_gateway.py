@@ -105,6 +105,13 @@ def test_budget_states():
     assert b.check("t") == "deny" and b.check("unknown") == "deny"
 
 
+def test_budget_report():
+    b = Budgets({"a": 10, "b": 4})
+    b.add("a", 8.5)
+    assert b.report() == [{"team": "a", "spent_usd": 8.5, "limit_usd": 10, "used_pct": 85.0, "state": "warn"},
+                          {"team": "b", "spent_usd": 0.0, "limit_usd": 4, "used_pct": 0.0, "state": "ok"}]
+
+
 def test_gateway_statuses_and_no_prompt_stored():
     gw, tok = build(burst=2)
     eng = tok("a", ["engineer"], "fw")

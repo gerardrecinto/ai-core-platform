@@ -50,5 +50,26 @@ def make_handler(gw):
     return H
 
 
-def serve(gw, port=8080):
-    return ThreadingHTTPServer(("127.0.0.1", port), make_handler(gw))
+def serve(gw, port=8080, host="127.0.0.1"):
+    return ThreadingHTTPServer((host, port), make_handler(gw))
+
+
+def main():
+    """Lab server: fresh keys, mock providers, one printed token. Real deployments verify tokens from the identity provider."""
+    import os
+    import time
+    from .gateway import Gateway
+    from .jwtlite import gen_rsa, sign_token
+    from .router import Provider
+    key = gen_rsa(1024)
+    iss, aud = "https://login.example.test/tenant/v2.0", "api://ai-core"
+    gw = Gateway({"k1": key[:2]}, iss, aud, [Provider("commercial-api", "commercial", 0.5, 1.5),
+                 Provider("bedrock-claude", "bedrock", 0.8, 2.4), Provider("vllm-onprem", "selfhosted", 0.1, 0.1)], {"fw": 5.0})
+    tok = sign_token(key, "k1", {"iss": iss, "aud": aud, "sub": "alice", "roles": ["engineer"], "team": "fw", "exp": time.time() + 3600})
+    port = int(os.environ.get("PORT", "8080"))
+    print(f"listening on :{port}. Try:\ncurl -s localhost:{port}/v1/chat -H 'Authorization: Bearer {tok}' -d '{{\"prompt\":\"hello\",\"data_class\":\"public\"}}'", flush=True)
+    serve(gw, port, os.environ.get("HOST", "127.0.0.1")).serve_forever()
+
+
+if __name__ == "__main__":
+    main()

@@ -30,3 +30,9 @@ class Budgets:
 
     def add(self, team, usd):
         self.spent[team] = self.spent.get(team, 0.0) + usd
+
+    def report(self):
+        """Spend against budget per team, for the monthly cost review."""
+        return [{"team": t, "spent_usd": round(self.spent.get(t, 0.0), 4), "limit_usd": lim,
+                 "used_pct": round(100 * self.spent.get(t, 0.0) / lim, 1), "state": self.check(t)}
+                for t, lim in sorted(self.limits.items())]

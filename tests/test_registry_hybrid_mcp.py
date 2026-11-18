@@ -127,3 +127,25 @@ def test_mcp_intern_is_denied_the_eda_tool():
     out = rpc("intern", {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
                          "params": {"name": "run_eda_job", "arguments": {"command": "eda-lint", "args": []}}})
     assert out[0]["result"]["isError"] and "role not allowed" in out[0]["result"]["content"][0]["text"]
+
+
+def test_agent_http_accepts_ticket_and_rejects_replay():
+    import threading
+    import urllib.error
+    import urllib.request
+    from aicore.agent import make_handler
+    from http.server import ThreadingHTTPServer
+    a = agent()
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(a, lambda: 1.0))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    t = issue_ticket(b"s", "alice", "eda-lint", ["top.v"], 0).encode()
+    try:
+        r = urllib.request.urlopen(urllib.request.Request(base + "/jobs", data=t))
+        jid = json.loads(r.read())["job"]
+        assert r.status == 202 and json.loads(urllib.request.urlopen(f"{base}/jobs/{jid}").read())["uid"] == 1001
+        with pytest.raises(urllib.error.HTTPError) as e:
+            urllib.request.urlopen(urllib.request.Request(base + "/jobs", data=t))
+        assert e.value.code == 403
+    finally:
+        srv.shutdown()

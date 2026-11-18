@@ -1,0 +1,15 @@
+image:
+  repository: ghcr.io/gerardrecinto/ai-core-platform
+  tag: "0.1.0"
+replicas: 2
+serviceAccount:
+  roleArn: ""   # IRSA role from infra/aws
+resources:
+  requests: { cpu: 100m, memory: 128Mi }
+  limits: { memory: 256Mi }
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPU: 70
+ingressCidr: 10.0.0.0/8   # who may reach the gateway
