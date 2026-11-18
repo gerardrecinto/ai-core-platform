@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "ai-core": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["-m", "aicore.mcp_server"],
+      "env": { "PYTHONPATH": "src", "AICORE_ROLES": "engineer" }
+    }
+  }
+}
